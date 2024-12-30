@@ -1,4 +1,44 @@
-[all:vars]
-ansible_ssh_common_args='-o StrictHostKeyChecking=no'
-[all]
-test ansible_ssh_host=
+---
+- name: Install Terraform
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install dependencies
+      apt:
+        name:
+          - wget
+          - unzip
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install dependencies
+      yum:
+        name:
+          - wget
+          - unzip
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Download Terraform
+      get_url:
+        url: "https://releases.hashicorp.com/terraform/{{ terraform_version }}/terraform_{{ terraform_version }}_linux_amd64.zip"
+        dest: /tmp/terraform.zip
+
+    - name: Unzip Terraform binary
+      unarchive:
+        src: /tmp/terraform.zip
+        dest: /usr/local/bin/
+        remote_src: yes
+
+    - name: Ensure Terraform is executable
+      file:
+        path: /usr/local/bin/terraform
+        mode: '0755'
+
+    - name: Verify Terraform installation
+      command: terraform --version
+      register: terraform_version_output
+
+    - name: Display Terraform version
+      debug:
+        msg: "{{ terraform_version_output.stdout }}"
